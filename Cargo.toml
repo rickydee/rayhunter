@@ -3,5 +3,6 @@
 members = [
     "orca",
     "wavehunter",
+    "fbshow",
 ]
 resolver = "2"
