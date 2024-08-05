@@ -11,8 +11,13 @@ if ! sha256sum -c --quiet release.tar.sha256; then
     exit 1
 fi
 
+platform="$(uname)"
 tar -xf release.tar
-./install-linux.sh
+if [ "$platform" == "Linux" ]; then
+    ./install-linux.sh
+elif [ "$platform" == "Darwin" ]; then
+    ./install-macos.sh
+fi
 
 cd ..
 rm -rf build
