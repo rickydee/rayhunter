@@ -16,7 +16,7 @@ jobs:
             build_name: serial
           - os: windows-latest
             build_name: serial.exe
-          - os: macos-latest
+          - os: macos-latest-large # "large" is the intel mac runner
             build_name: serial
     runs-on: ${{ matrix.platform.os }}
     steps:
