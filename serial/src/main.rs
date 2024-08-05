@@ -140,7 +140,13 @@ fn open_device<T: UsbContext>(context: &mut T, vid: u16, pid: u16) -> Option<Dev
 
         if device_desc.vendor_id() == vid && device_desc.product_id() == pid {
             match device.open() {
-                Ok(handle) => return Some(handle),
+                Ok(mut handle) => {
+                    if rusb::supports_detach_kernel_driver() {
+                        handle.set_auto_detach_kernel_driver(true)
+                            .expect("failed to set auto_detach_kernel_driver");
+                    }
+                    return Some(handle);
+                },
                 Err(e) => panic!("device found but failed to open: {}", e),
             }
         }
