@@ -1,0 +1,11 @@
+FROM arm32v7/ubuntu:latest
+
+RUN apt-get update && apt-get install -y python3 build-essential libpython3-dev libffi-dev
+RUN apt-get install -y python3-venv patchelf
+COPY . /build
+WORKDIR /build
+RUN sleep infinity
+RUN python3 -m venv venv
+RUN venv/bin/pip3 install -r requirements.txt
+ENV LDFLAGS="-static"
+RUN venv/bin/python3 -m nuitka --output-filename=nas-analyzer --static-libpython=yes --standalone main.py
