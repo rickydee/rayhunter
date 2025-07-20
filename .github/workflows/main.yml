@@ -73,6 +73,8 @@ jobs:
     name: Publish mdBook to Github Pages
     needs: mdbook_test
     if: ${{ github.ref == 'refs/heads/main' }}
+    environment:
+      name: github-pages
     permissions:
       pages: write
       contents: write
