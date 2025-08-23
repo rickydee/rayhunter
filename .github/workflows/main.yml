@@ -106,6 +106,7 @@ jobs:
       contents: read
     steps:
     - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
     - name: Check formatting
       run: cargo fmt --all --check
@@ -345,7 +346,7 @@ jobs:
           else
             mv installer-$platform/installer "$dest"/installer
           fi
-          cp -r rayhunter-daemon rootshell/rootshell dist/* installer/install.ps1 "$dest"/
+          cp -r rayhunter-check-* rayhunter-daemon rootshell/rootshell dist/* installer/install.ps1 "$dest"/
           zip -r "$dest.zip" "$dest"
           sha256sum "$dest.zip" > "$dest.zip.sha256"
 

@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 
-use super::analyzer::{Analyzer, Event, EventType, Severity};
+use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use log::debug;
 
@@ -56,28 +56,45 @@ impl ImsiRequestedAnalyzer {
                 self.timeout_counter = 0;
             }
 
-            // Unexpected IMSI without AttachRequest
-            (current, State::IdentityRequest) if *current != State::AttachRequest => {
+            // IMSI or IMEI requested after auth accept
+            (State::AuthAccept, State::IdentityRequest) => {
                 self.flag = Some(Event {
-                    event_type: EventType::QualitativeWarning {
-                        severity: Severity::High,
-                    },
+                    event_type: EventType::High,
+                    message: format!(
+                        "Identity requested after auth request (frame {})",
+                        self.packet_num
+                    ),
+                });
+            }
+
+            // Unexpected IMSI without AttachRequest
+            (State::Disconnect, State::IdentityRequest) => {
+                self.flag = Some(Event {
+                    event_type: EventType::High,
                     message: format!(
                         "Identity requested without Attach Request (frame {})",
                         self.packet_num
-                    )
-                    .to_string(),
+                    ),
                 });
             }
 
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
                 self.flag = Some(Event {
-                    event_type: EventType::QualitativeWarning {
-                        severity: Severity::High,
-                    },
+                    event_type: EventType::High,
                     message: format!(
                         "Disconnected after Identity Request without Auth Accept (frame {})",
+                        self.packet_num
+                    ),
+                });
+            }
+
+            // Notify on any identity reqeust (IMEI or IMSI)
+            (_, State::IdentityRequest) => {
+                self.flag = Some(Event {
+                    event_type: EventType::Informational,
+                    message: format!(
+                        "Identity Request happened but its not suspicious yet. (frame {})",
                         self.packet_num
                     )
                     .to_string(),
@@ -109,7 +126,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
     }
 
     fn get_version(&self) -> u32 {
-        2
+        3
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {

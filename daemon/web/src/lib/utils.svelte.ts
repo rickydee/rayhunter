@@ -8,12 +8,14 @@ export interface AnalyzerConfig {
     null_cipher: boolean;
     nas_null_cipher: boolean;
     incomplete_sib: boolean;
+    test_analyzer: boolean;
 }
 
 export interface Config {
     ui_level: number;
     colorblind_mode: boolean;
     key_input_mode: number;
+    ntfy_url: string;
     analyzers: AnalyzerConfig;
 }
 
