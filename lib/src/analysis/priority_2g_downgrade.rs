@@ -74,7 +74,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
                                 && p == 7 
-                                //shj used to be p == 0
+                                // shj used to be p == 0
                             {
                                 return Some(Event {
                                     event_type: EventType::High,
@@ -96,7 +96,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         if let Some(CellReselectionPriority(p)) =
                             carrier_info.common_info.cell_reselection_priority
                             && p == 7 
-                            //shj used to be p == 0
+                            // shj used to be p == 0
                         {
                             return Some(Event {
                                 event_type: EventType::High,
