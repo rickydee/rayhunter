@@ -63,7 +63,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                                 return Some(Event {
                                     event_type: EventType::High,
                                     message:
-                                        "LTE cell advertised a 3G cell for priority 0 reselection"
+                                        "LTE cell advertised a 3G cell for priority greater than 0 reselection"
                                             .to_string(),
                                 });
                             }
@@ -78,7 +78,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                                 return Some(Event {
                                     event_type: EventType::High,
                                     message:
-                                        "LTE cell advertised a 3G cell for priority 0 reselection"
+                                        "LTE cell advertised a 3G cell for priority greater than 0 reselection"
                                             .to_string(),
                                 });
                             }
@@ -98,7 +98,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         {
                             return Some(Event {
                                 event_type: EventType::High,
-                                message: "LTE cell advertised a 2G cell for priority 0 reselection"
+                                message: "LTE cell advertised a 2G cell for priority greater than 0 reselection"
                                     .to_string(),
                             });
                         }
