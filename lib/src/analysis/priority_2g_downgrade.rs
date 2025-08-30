@@ -58,7 +58,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         for carrier_info in &carrier_info_list.0 {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
-                                && p == 7
+                                && p != 0
                             {
                                 return Some(Event {
                                     event_type: EventType::High,
@@ -73,7 +73,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         for carrier_info in &carrier_info_list.0 {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
-                                && p == 7
+                                && p != 0
                             {
                                 return Some(Event {
                                     event_type: EventType::High,
@@ -94,7 +94,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                     for carrier_info in &carrier_info_list.0 {
                         if let Some(CellReselectionPriority(p)) =
                             carrier_info.common_info.cell_reselection_priority
-                            && p == 7
+                            && p != 0
                         {
                             return Some(Event {
                                 event_type: EventType::High,
