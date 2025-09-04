@@ -25,7 +25,11 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
         1
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        _packet_num: usize,
+    ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::DlDcch(msg_cont) = &**lte_ie
             && let DL_DCCH_MessageType::C1(c1) = &msg_cont.message

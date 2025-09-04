@@ -23,7 +23,6 @@ pub enum State {
 }
 
 pub struct ImsiRequestedAnalyzer {
-    packet_num: usize,
     state: State,
     timeout_counter: usize,
     flag: Option<Event>,
@@ -38,20 +37,19 @@ impl Default for ImsiRequestedAnalyzer {
 impl ImsiRequestedAnalyzer {
     pub fn new() -> Self {
         Self {
-            packet_num: 0,
             state: State::Unattached,
             timeout_counter: 0,
             flag: None,
         }
     }
 
-    fn transition(&mut self, next_state: State) {
+    fn transition(&mut self, next_state: State, packet_num: usize) {
         match (&self.state, &next_state) {
             // Reset timeout on successful auth
             (_, State::AuthAccept) => {
                 debug!(
                     "reset timeout counter at {} due to auth accept (frame {})",
-                    self.timeout_counter, self.packet_num
+                    self.timeout_counter, packet_num
                 );
                 self.timeout_counter = 0;
             }
@@ -60,10 +58,7 @@ impl ImsiRequestedAnalyzer {
             (State::AuthAccept, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
-                    message: format!(
-                        "Identity requested after auth request (frame {})",
-                        self.packet_num
-                    ),
+                    message: "Identity requested after auth request".to_string(),
                 });
             }
 
@@ -71,10 +66,7 @@ impl ImsiRequestedAnalyzer {
             (State::Disconnect, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
-                    message: format!(
-                        "Identity requested without Attach Request (frame {})",
-                        self.packet_num
-                    ),
+                    message: "Identity requested without Attach Request".to_string(),
                 });
             }
 
@@ -82,10 +74,7 @@ impl ImsiRequestedAnalyzer {
             (State::IdentityRequest, State::Disconnect) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
-                    message: format!(
-                        "Disconnected after Identity Request without Auth Accept (frame {})",
-                        self.packet_num
-                    ),
+                    message: "Disconnected after Identity Request without Auth Accept".to_string(),
                 });
             }
 
@@ -93,11 +82,7 @@ impl ImsiRequestedAnalyzer {
             (_, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::Informational,
-                    message: format!(
-                        "Identity Request happened but its not suspicious yet. (frame {})",
-                        self.packet_num
-                    )
-                    .to_string(),
+                    message: "Identity Request happened but its not suspicious yet.".to_string(),
                 });
                 self.timeout_counter = 0;
             }
@@ -106,7 +91,7 @@ impl ImsiRequestedAnalyzer {
             _ => {
                 debug!(
                     "Transition from {:?} to {:?} at {}",
-                    self.state, next_state, self.packet_num
+                    self.state, next_state, packet_num
                 );
             }
         }
@@ -129,29 +114,31 @@ impl Analyzer for ImsiRequestedAnalyzer {
         3
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
-        self.packet_num += 1;
-
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        packet_num: usize,
+    ) -> Option<Event> {
         if let InformationElement::LTE(inner) = ie {
             match &**inner {
                 LteInformationElement::NAS(payload) => match payload {
                     NASMessage::EMMMessage(EMMMessage::EMMExtServiceRequest(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMAttachRequest(_)) => {
-                        self.transition(State::AttachRequest);
+                        self.transition(State::AttachRequest, packet_num);
                     }
                     NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(_)) => {
-                        self.transition(State::IdentityRequest);
+                        self.transition(State::IdentityRequest, packet_num);
                     }
                     NASMessage::EMMMessage(EMMMessage::EMMAttachComplete(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
-                        self.transition(State::AuthAccept);
+                        self.transition(State::AuthAccept, packet_num);
                     }
                     NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMO(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMT(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
-                        self.transition(State::Disconnect);
+                        self.transition(State::Disconnect, packet_num);
                     }
                     _ => {}
                 },
@@ -161,7 +148,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     | UL_CCCH_MessageType::C1(
                         UL_CCCH_MessageType_c1::RrcConnectionReestablishmentRequest(_),
                     ) => {
-                        self.transition(State::AttachRequest);
+                        self.transition(State::AttachRequest, packet_num);
                     }
                     _ => {}
                 },
@@ -171,7 +158,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         _,
                     )) = rrc_payload.message
                     {
-                        self.transition(State::Disconnect)
+                        self.transition(State::Disconnect, packet_num)
                     }
                 }
                 _ => {}
@@ -182,16 +169,12 @@ impl Analyzer for ImsiRequestedAnalyzer {
             self.timeout_counter += 1;
             debug!(
                 "timeout: counter {}, packet: {}",
-                self.timeout_counter, self.packet_num
+                self.timeout_counter, packet_num
             );
             if self.timeout_counter >= TIMEOUT_THRESHHOLD {
                 self.flag = Some(Event {
                     event_type: EventType::Informational {},
-                    message: format!(
-                        "Identity request happened without auth request followup (frame {})",
-                        self.packet_num
-                    )
-                    .to_string(),
+                    message: "Identity request happened without auth request followup".to_string(),
                 });
                 self.timeout_counter = 0;
             }
