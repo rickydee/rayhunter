@@ -6,7 +6,7 @@ Rayhunter includes several analyzers to detect potential IMSI catcher activity. 
 
 ### IMSI Requested (v3)
 
-This analyser tests whether the eNodeB sends an IMSI or IMEI Identity Request NAS message under suspicous .
+This analyser tests whether the eNodeB sends an IMSI or IMEI Identity Request NAS message under suspicious .
 
 Mobile networks primarily request IMSI or IMEI from a mobile device during initial network attachment or when the network cannot identify the mobile device by its temporary identification (TMSI - *Temporary Mobile Subscriber Identity* or GUTI - *Globally Unique Temporary Identifier* in 4G/5G terminology).
 
@@ -21,7 +21,7 @@ What we consider suspicious is the following chain of events:
 * Phone connects to a new tower. 
 * Tower asks for phones identity (IMEI or IMSI.)
 * Authentication does *NOT* happen. 
-* Tower requests phoen to disconnect. 
+* Tower requests phone to disconnect. 
 
 Looking for this chain of events is much less prone to false positives than naively looking for any time the IMSI/IMEI is sent. We do still sometimes get false positives when users are in an airplane that is coming in for a landing however. This is likely do to having been disconnected for a while and then being over towers that are not able to route to your home network, but we are still researching.
 
@@ -75,4 +75,4 @@ On its own this might just be a misconfigured base station (though we have only 
 
 ### Test Analyzer
 
-This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisey so we do not reccomend leaving it on but if this alerts it means your Rayhunter device is working! 
+This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisey so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 
