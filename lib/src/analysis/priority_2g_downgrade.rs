@@ -59,12 +59,12 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         for carrier_info in &carrier_info_list.0 {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
-                                && p != 0
+                                && p > 2
                             {
                                 return Some(Event {
                                     event_type: EventType::High,
                                     message:
-                                        "LTE cell advertised a 3G cell for priority greater than 0 reselection"
+                                        "LTE cell advertised a 3G cell for priority greater than 2 reselection"
                                             .to_string(),
                                 });
                             }
@@ -74,12 +74,12 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         for carrier_info in &carrier_info_list.0 {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
-                                && p != 0
+                                && p > 2
                             {
                                 return Some(Event {
                                     event_type: EventType::High,
                                     message:
-                                        "LTE cell advertised a 3G cell for priority greater than 0 reselection"
+                                        "LTE cell advertised a 3G cell for priority greater than 2 reselection"
                                             .to_string(),
                                 });
                             }
@@ -95,11 +95,11 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                     for carrier_info in &carrier_info_list.0 {
                         if let Some(CellReselectionPriority(p)) =
                             carrier_info.common_info.cell_reselection_priority
-                            && p != 0
+                            && p > 2
                         {
                             return Some(Event {
                                 event_type: EventType::High,
-                                message: "LTE cell advertised a 2G cell for priority greater than 0 reselection"
+                                message: "LTE cell advertised a 2G cell for priority greater than 2 reselection"
                                     .to_string(),
                             });
                         }
